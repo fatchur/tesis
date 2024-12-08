@@ -1,0 +1,27 @@
+[project]
+name = "training-project"
+version = "0.1.0"
+description = "Training project with ML dependencies"
+requires-python = ">=3.8"
+
+dependencies = [
+    "pandas>=2.0.0",
+    "seaborn>=0.12.0",
+    "matplotlib>=3.7.0",
+    "scikit-learn>=1.2.0",
+    "torch>=2.0.0",
+    "numpy>=1.24.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+pandas = "^2.0.0"
+seaborn = "^0.12.0"
+matplotlib = "^3.7.0"
+scikit-learn = "^1.2.0"
+torch = "^2.0.0"
+numpy = "^1.24.0"
