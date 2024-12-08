@@ -28,7 +28,7 @@ class HybridFirstBlock(nn.Module):
         super().__init__()
 
         # Calculate conv output size
-        conv_hidden_size = 128
+        conv_hidden_size = hidden_size // 8
 
         # Activation function setup
         activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
@@ -42,30 +42,45 @@ class HybridFirstBlock(nn.Module):
             nn.Dropout(dropout_rate)
         )
 
-        # Conv1D path
+        # Calculate conv output size after flattening
+        conv_output_size = input_size * conv_hidden_size
+
+        # Conv1D path with additional FC layer
         self.conv_path = nn.Sequential(
-            nn.Conv1d(1, conv_hidden_size, kernel_size + 2, padding='same'),
+            nn.Conv1d(1, conv_hidden_size, kernel_size, padding='same'),
             activation_fn,
             nn.BatchNorm1d(conv_hidden_size),
             nn.Dropout(dropout_rate),
 
-            # nn.Conv1d(conv_hidden_size, conv_hidden_size, kernel_size, padding='same'),
-            # activation_fn,
-            # nn.BatchNorm1d(conv_hidden_size),
-            # nn.Dropout(dropout_rate),
+            nn.Conv1d(conv_hidden_size, conv_hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(conv_hidden_size),
+            nn.Dropout(dropout_rate),
 
-            nn.Flatten()
+            nn.Flatten(),
+            
+            # Add FC layer to match hidden size
+            nn.Linear(conv_output_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate)
         )
 
-        # Output projection
-        total_concat_size = hidden_size + (input_size * conv_hidden_size)
-        self.output_projection = nn.Linear(total_concat_size, hidden_size)
+        # Final output projection
+        self.output_projection = nn.Linear(hidden_size * 2, hidden_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Process dense path
         dense_output = self.dense_path(x)
-        conv_input = x.unsqueeze(1)
+        
+        # Process conv path
+        conv_input = x.unsqueeze(1)  # Add channel dimension
         conv_output = self.conv_path(conv_input)
+        
+        # Combine paths
         combined = torch.cat([dense_output, conv_output], dim=1)
+        
+        # Final projection
         return self.output_projection(combined)
 
 class HybridNetwork(nn.Module):
@@ -105,21 +120,25 @@ class HybridNetwork(nn.Module):
         # Activation setup for subsequent layers
         activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
 
-        # Subsequent layers
-        layers = []
+        # Subsequent layers with residual connections
+        self.layers = nn.ModuleList()
         for i in range(1, num_layers):
             current_dropout = dropout_rate * (1 - i/num_layers)
-            layers.extend([
+            layer = nn.Sequential(
                 nn.Linear(hidden_size, hidden_size),
                 ActivationFactory.get_activation(activation, **activation_params),
                 nn.BatchNorm1d(hidden_size),
                 nn.Dropout(current_dropout)
-            ])
+            )
+            self.layers.append(layer)
 
         # Output layer
-        layers.append(nn.Linear(hidden_size, output_size))
-
-        self.subsequent_layers = nn.Sequential(*layers)
+        self.output_layer = nn.Sequential(
+            nn.Linear(hidden_size, output_size),
+            nn.Sigmoid()
+        )
+        
+        # Initialize weights
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
@@ -134,8 +153,17 @@ class HybridNetwork(nn.Module):
                 nn.init.constant_(module.bias, 0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # First block
         x = self.first_block(x)
-        return self.subsequent_layers(x)
+        
+        # Process through subsequent layers with residual connections
+        for layer in self.layers:
+            residual = x
+            x = layer(x)
+            x = x + residual  # Residual connection
+            
+        # Output layer
+        return self.output_layer(x)
 
     def get_info(self) -> Dict:
         """Return model information"""
