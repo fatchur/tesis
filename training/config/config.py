@@ -12,11 +12,12 @@ SELECT_FEATURE = False
 # Training configuration
 TRAINING_CONFIG = {
     'batch_size': 256,
-    'val_batch_size': 1028,
+    'val_batch_size': 512,
     'learning_rate': 0.001,
     'weight_decay': 0.00005,
     'epochs': 2000,
     'early_stopping_patience': 10,
+    'early_stopping_factor': 0.995,
     'early_stopping_delta': 1e-4,
     'num_layers': 5,
     'hidden_size': 512,

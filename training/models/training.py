@@ -105,8 +105,8 @@ class Trainer:
         self.scheduler = ReduceLROnPlateau(
             self.optimizer,
             mode='min',
-            factor=0.95,
-            patience=3
+            factor=config.get('early_stopping_factor', 0.95),
+            patience=config.get('early_stopping_patience', 5)
         )
 
         # Initialize early stopping
@@ -136,20 +136,31 @@ class Trainer:
             # Update learning rate
             self.scheduler.step(val_loss)
 
-            # Save best model
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
-                self.model_manager.save_model(
-                    model=self.model,
-                    optimizer=self.optimizer,
-                    epoch=epoch,
-                    train_loss=train_loss,
-                    val_loss=val_loss,
-                    filename=model_filename
+            # Save model if better (using custom save function if available)
+            if hasattr(self, 'save_if_better'):
+                improved = self.save_if_better(
+                    self.model, 
+                    self.optimizer,
+                    epoch,
+                    train_loss,
+                    val_loss
                 )
-                improvement = "***"
+                improvement_marker = "***" if improved else ""
             else:
-                improvement = ""
+                # Original saving logic as fallback
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
+                    self.model_manager.save_model(
+                        model=self.model,
+                        optimizer=self.optimizer,
+                        epoch=epoch,
+                        train_loss=train_loss,
+                        val_loss=val_loss,
+                        filename=model_filename
+                    )
+                    improvement_marker = "***"
+                else:
+                    improvement_marker = ""
 
             # Print progress
             print(
@@ -157,7 +168,7 @@ class Trainer:
                 f'Train Loss: {train_loss:.6f} | '
                 f'Val Loss: {val_loss:.6f} | '
                 f'LR: {self.optimizer.param_groups[0]["lr"]:.6f} '
-                f'{improvement}'
+                f'{improvement_marker}'
             )
 
             # Early stopping check
