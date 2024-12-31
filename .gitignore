@@ -1,2 +1,7 @@
 *.pyc
 *.csv
+*.pth
+*.png
+.DS_Store
+*.vscode
+test.py
