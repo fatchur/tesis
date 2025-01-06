@@ -5,11 +5,13 @@ from config.config import TRAINING_CONFIG, VERSION, SCALE, LOWER_THD, UPPER_THD
 import os
 import torch
 
+BASE_DIR = "/Users/asani/Documents/Documents/tesis/training"
+
 def main():
     """Main execution function"""
     # Setup paths
     print("Starting training pipeline...")
-    base_dir = f'data/v{VERSION}'
+    base_dir = f'{BASE_DIR}/data/v{VERSION}'
     model_name = f'v_HYBRID_{VERSION}_{int(LOWER_THD * SCALE)}_{int(UPPER_THD * SCALE)}'
     model_path = os.path.join(base_dir, 'models', f"{model_name}.pth")
 
@@ -17,7 +19,7 @@ def main():
         # Load and prepare data
         print("Loading and preparing data...")
         data_processor = DataProcessor()
-        train_feature, train_target, val_feature, val_target = data_processor.load_data()
+        train_feature, train_target, val_feature, val_target = data_processor.load_data(BASE_DIR)
         train_loader, val_loader = data_processor.prepare_data(
             train_feature=train_feature,
             train_target=train_target,

@@ -3,10 +3,10 @@ import numpy as np
 
 # Constants
 FEATURE_NUM = 8000
-UPPER_THD = 300/800
+UPPER_THD = 800/800
 LOWER_THD = 0/800
 SCALE = 800.
-VERSION = 5
+VERSION = 6
 SELECT_FEATURE = False
 
 # Training configuration
