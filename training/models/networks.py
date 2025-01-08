@@ -125,6 +125,7 @@ class HybridNetwork(nn.Module):
 
         # Subsequent layers with residual connections
         self.layers = nn.ModuleList()
+        print ("num fc layers: ", num_layers)
         for i in range(1, num_layers):
             current_dropout = dropout_rate * (1 - i/num_layers)
             layer = nn.Sequential(

@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 import torch.nn as nn
 from typing import List, Optional
 
@@ -126,3 +127,37 @@ class YOLOInspiredGlucoseLoss(nn.Module):
        total_loss = range_loss + self.alpha * value_loss
 
        return total_loss
+   
+
+def calculate_range_metrics(outputs: torch.Tensor, targets: torch.Tensor) -> tuple:
+    """Calculate range-based accuracy and recall metrics.
+    
+    Args:
+        outputs: Model predictions [batch_size, num_ranges]
+        targets: Target values [batch_size, num_ranges]
+        
+    Returns:
+        tuple: (accuracy, recall, mse)
+    """
+    # Get predicted range (max probability)
+    pred_ranges = torch.argmax(outputs, dim=1)
+    true_ranges = torch.argmax(targets, dim=1)
+    
+    # Calculate accuracy
+    accuracy = (pred_ranges == true_ranges).float().mean().item()
+    
+    # Calculate recall for each range
+    recalls = []
+    for range_idx in range(outputs.shape[1]):
+        true_positives = ((pred_ranges == range_idx) & (true_ranges == range_idx)).sum().item()
+        total_actual = (true_ranges == range_idx).sum().item()
+        recall = true_positives / total_actual if total_actual > 0 else 0.0
+        recalls.append(recall)
+    
+    # Average recall across ranges
+    mean_recall = np.mean(recalls)
+    
+    # Calculate MSE
+    mse = torch.nn.functional.mse_loss(outputs, targets).item()
+    
+    return accuracy, mean_recall, mse
