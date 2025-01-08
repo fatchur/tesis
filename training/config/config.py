@@ -8,6 +8,12 @@ LOWER_THD = 0/800
 SCALE = 800.
 VERSION = 6
 SELECT_FEATURE = False
+RANGES = [
+            (0, 100/SCALE),
+            (100/SCALE, 200/SCALE),
+            (200/SCALE, 300/SCALE),
+            (300/SCALE, float('inf'))
+        ]
 
 # Training configuration
 TRAINING_CONFIG = {

@@ -3,7 +3,40 @@ import numpy as np
 from torch.utils.data import TensorDataset, DataLoader, ConcatDataset
 import torch
 from typing import Tuple, Optional, List
-from config.config import SCALE, VERSION, SELECT_FEATURE, UPPER_THD, LOWER_THD
+from config.config import SCALE, VERSION, SELECT_FEATURE, UPPER_THD, LOWER_THD, RANGES
+
+
+def normalize_target(value: float, ranges: List[Tuple[float, float]], scale: float) -> List[float]:
+    """
+    Normalize glucose value into target vector where:
+    - Only one position has non-zero value (the range it falls into)
+    - The value is normalized within that range
+    
+    Args:
+        value: Glucose value (already normalized by SCALE)
+        ranges: List of (start, end) ranges
+        scale: SCALE value for denormalization if needed
+    
+    Returns:
+        List of floats representing target vector
+    """
+    result = [0.0] * len(ranges)
+    
+    for i, (start, end) in enumerate(ranges):
+        if start <= value < end:
+            if end == float('inf'):
+                # For last range (>300/SCALE)
+                # Normalize between start and 1.0
+                normalized = (value - start)/(1.0 - start)
+            else:
+                # For other ranges
+                # Normalize between 0 and 1 within range
+                normalized = (value - start)/(end - start)
+            
+            result[i] = normalized
+            break
+    
+    return result
 
 class DataProcessor:
     """Handles data preparation and loading with range-based sampling"""
@@ -61,12 +94,7 @@ class DataProcessor:
             List of datasets for each range
         """
         # Define value ranges (after scaling)
-        ranges = [
-            (0, 100/SCALE),
-            (100/SCALE, 200/SCALE),
-            (200/SCALE, 300/SCALE),
-            (300/SCALE, float('inf'))
-        ]
+        ranges = RANGES
         
         # Initialize range datasets
         range_datasets = []
@@ -85,7 +113,6 @@ class DataProcessor:
             end_val = end * SCALE if end != float('inf') else 'inf'
             print(f"Range {start_val:.0f} - {end_val}: {count} samples")
         
-        # Create datasets for each range
         for i, ((start, end), mask) in enumerate(zip(ranges, range_masks), 1):
             range_features = features[mask]
             range_targets = targets[mask]
@@ -95,12 +122,11 @@ class DataProcessor:
             
             # Sample if specified
             if samples_per_range is not None:
-                # If we have fewer samples than requested, sample with replacement
                 replace = len(range_features) < samples_per_range
                 indices = np.random.choice(
                     len(range_features),
                     samples_per_range,
-                    replace=replace  # Use replacement if needed
+                    replace=replace
                 )
                 range_features = range_features.iloc[indices]
                 range_targets = range_targets.iloc[indices]
@@ -110,20 +136,28 @@ class DataProcessor:
                 else:
                     print(f"Range {start * SCALE:.0f} - {end * SCALE if end != float('inf') else 'inf'}: Downsampled from {original_size} to {samples_per_range} samples")
             
-            # Convert to tensors
+            # Convert features to tensor
             X = torch.tensor(
                 range_features.values,
                 dtype=torch.float32,
                 requires_grad=True
             )
+            
+            # Convert targets to normalized range vectors
+            normalized_targets = np.array([
+                normalize_target(target_val, RANGES, SCALE) 
+                for target_val in range_targets.values
+            ])
+            
+            # Convert to tensor
             y = torch.tensor(
-                range_targets.values,
+                normalized_targets,
                 dtype=torch.float32,
                 requires_grad=True
-            ).view(-1, 1)
+            )
             
             range_datasets.append(TensorDataset(X, y))
-        
+
         return range_datasets
 
     @staticmethod
@@ -160,12 +194,7 @@ class DataProcessor:
         # Create range datasets for training data
         if samples_per_range is None:
             # Calculate samples per range (use minimum size of all ranges)
-            ranges = [
-                (0, 100/SCALE),
-                (100/SCALE, 200/SCALE),
-                (200/SCALE, 300/SCALE),
-                (300/SCALE, float('inf'))
-            ]
+            ranges = RANGES
             range_sizes = [
                 ((train_target >= start) & (train_target < end)).sum()
                 for start, end in ranges
@@ -199,11 +228,23 @@ class DataProcessor:
             dtype=torch.float32,
             requires_grad=True
         )
+
+        normalized_val_targets = np.array([
+            normalize_target(target_val, RANGES, SCALE) 
+            for target_val in val_target.values])
+
+        # y_val = torch.tensor(
+        #     val_target.values,
+        #     dtype=torch.float32,
+        #     requires_grad=True
+        # ).view(-1, 1)
+
         y_val = torch.tensor(
-            val_target.values,
-            dtype=torch.float32,
-            requires_grad=True
-        ).view(-1, 1)
+                    normalized_val_targets,
+                    dtype=torch.float32,
+                    requires_grad=True
+                )
+
         val_dataset = TensorDataset(X_val, y_val)
 
         # Create dataloaders

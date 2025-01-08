@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Tuple
 import numpy as np
-from models.losses import QuantileBalancedMSELoss
+from models.losses import YOLOInspiredGlucoseLoss
 
 class EarlyStopping:
     """Early stopping to prevent overfitting"""
@@ -89,10 +89,7 @@ class Trainer:
         self.model_manager = model_manager
 
         # Initialize loss function
-        self.criterion = QuantileBalancedMSELoss(
-            num_quantiles=5, 
-            quantile_weights=[0.1, 0.08, 0.05, 0.08, 0.1]
-        )
+        self.criterion = YOLOInspiredGlucoseLoss(alpha=0.1)
 
         # Initialize optimizer
         self.optimizer = optim.Adam(
@@ -191,6 +188,7 @@ class Trainer:
             self.optimizer.zero_grad()
             outputs = self.model(inputs)
             loss = self.criterion(outputs, targets)
+
             loss.backward()
 
             # Gradient clipping

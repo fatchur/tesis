@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from utils.data_processing import DataProcessor
-from config.config import SCALE
+from config.config import SCALE, RANGES
 
 def analyze_distribution():
     # Load original data
@@ -26,12 +26,7 @@ def analyze_distribution():
         resampled_targets.extend(targets.squeeze().tolist())
     
     # Define ranges for analysis
-    ranges = [
-        (0, 100),
-        (100, 200),
-        (200, 300),
-        (300, float('inf'))
-    ]
+    ranges = RANGES
     
     # Create visualization
     fig, (ax1, ax2) = plt.subplots(2, 2, figsize=(15, 10))

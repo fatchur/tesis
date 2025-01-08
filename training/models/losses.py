@@ -84,3 +84,45 @@ class QuantileBalancedMSELoss(nn.Module):
                 total_loss += self.quantile_weights[i] * quantile_loss
 
         return total_loss
+    
+class YOLOInspiredGlucoseLoss(nn.Module):
+   """
+   Custom loss function inspired by YOLO combining:
+   1. Binary Cross Entropy for range prediction
+   2. MSE for value prediction within range
+   """
+   def __init__(self, alpha: float = 1.0):
+       super().__init__()
+       self.alpha = alpha
+       self.bce = nn.BCELoss()
+       self.mse = nn.MSELoss()
+
+   def forward(self, predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+       """
+       Args:
+           predictions: Model predictions [batch_size, num_ranges]
+           targets: Target values [batch_size, num_ranges]
+           Each vector contains zeros except one position with normalized value
+       """
+       # Binary Cross Entropy for range prediction
+       # Convert targets to binary (1 for non-zero values, 0 for zeros)
+       target_ranges = (targets > 0).float()
+       range_loss = self.bce(predictions, target_ranges)
+
+       # MSE for value prediction, but only for the correct range
+       # Create mask for non-zero target positions
+       value_mask = targets > 0
+       
+       if torch.any(value_mask):
+           # Calculate MSE only for positions where target is non-zero
+           value_loss = self.mse(
+               predictions[value_mask],
+               targets[value_mask]
+           )
+       else:
+           value_loss = torch.tensor(0.0)
+
+       # Combine losses
+       total_loss = range_loss + self.alpha * value_loss
+
+       return total_loss

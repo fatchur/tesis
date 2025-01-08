@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import logging
 from typing import Dict
+from config.config import RANGES
+
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -96,6 +98,7 @@ class HybridNetwork(nn.Module):
                  conv_kernel_size: int = 3):
         super().__init__()
 
+        output_size = len(RANGES)
         self.architecture = {
             'input_size': input_size,
             'output_size': output_size,
@@ -134,7 +137,7 @@ class HybridNetwork(nn.Module):
 
         # Output layer
         self.output_layer = nn.Sequential(
-            nn.Linear(hidden_size, output_size),
+            nn.Linear(hidden_size, len(RANGES)),  
             nn.Sigmoid()
         )
         
