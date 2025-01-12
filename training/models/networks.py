@@ -30,7 +30,7 @@ class HybridFirstBlock(nn.Module):
         super().__init__()
 
         # Calculate conv output size
-        conv_hidden_size = hidden_size // 8
+        conv_hidden_size = 64
 
         # Activation function setup
         activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
@@ -41,6 +41,11 @@ class HybridFirstBlock(nn.Module):
             nn.Linear(input_size, hidden_size),
             activation_fn,
             nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
             nn.Dropout(dropout_rate)
         )
 
@@ -48,7 +53,7 @@ class HybridFirstBlock(nn.Module):
         conv_output_size = input_size * conv_hidden_size
 
         # Conv1D path with additional FC layer
-        self.conv_path = nn.Sequential(
+        self.conv_a1 = nn.Sequential(
             nn.Conv1d(1, conv_hidden_size, kernel_size, padding='same'),
             activation_fn,
             nn.BatchNorm1d(conv_hidden_size),
@@ -58,9 +63,17 @@ class HybridFirstBlock(nn.Module):
             activation_fn,
             nn.BatchNorm1d(conv_hidden_size),
             nn.Dropout(dropout_rate),
+        )
 
+        self.conv_a2 = nn.Sequential(
+            nn.Conv1d(conv_hidden_size, conv_hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(conv_hidden_size),
+            nn.Dropout(dropout_rate)
+        )
+
+        self.post_flatten = nn.Sequential(
             nn.Flatten(),
-            
             # Add FC layer to match hidden size
             nn.Linear(conv_output_size, hidden_size),
             activation_fn,
@@ -69,7 +82,16 @@ class HybridFirstBlock(nn.Module):
         )
 
         # Final output projection
-        self.output_projection = nn.Linear(hidden_size * 2, hidden_size)
+        self.output_projection = nn.Sequential(
+            nn.Linear(hidden_size * 2, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+        ) 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         # Process dense path
@@ -77,13 +99,21 @@ class HybridFirstBlock(nn.Module):
         
         # Process conv path
         conv_input = x.unsqueeze(1)  # Add channel dimension
-        conv_output = self.conv_path(conv_input)
+        conv_output = self.conv_a1(conv_input)
+        conv_post_flatten = self.post_flatten(conv_output)
         
         # Combine paths
-        combined = torch.cat([dense_output, conv_output], dim=1)
+        combined1 = torch.cat([dense_output, conv_post_flatten], dim=1)
+        projection1 = self.output_projection(combined1)
+
+        conv_output_a2 = self.conv_a2(conv_output)
+        conv_post_flatten2 = self.post_flatten(conv_output_a2)
+        
+        combined2 = torch.cat([projection1, conv_post_flatten2], dim=1)
+        projection2 = self.output_projection(combined2)
         
         # Final projection
-        return self.output_projection(combined)
+        return projection2
 
 class HybridNetwork(nn.Module):
     """Neural Network with hybrid first block and standard fully connected layers"""

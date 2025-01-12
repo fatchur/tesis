@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple
 import numpy as np
 from models.losses import YOLOInspiredGlucoseLoss, calculate_range_metrics
 from config.config import RANGES
+from datetime import datetime
 
 class EarlyStopping:
     """Early stopping to prevent overfitting"""
@@ -117,7 +118,7 @@ class Trainer:
         """Train the model with extended metrics tracking"""
         train_losses = []
         val_losses = []
-        best_val_loss = float('inf')
+        best_train_loss = float('inf')
         num_epochs = self.config.get('epochs', 500)
 
         for epoch in range(num_epochs):
@@ -147,8 +148,8 @@ class Trainer:
                 )
                 improvement_marker = "***" if improved else ""
             else:
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
+                if train_loss < best_train_loss:
+                    best_train_loss = train_loss
                     self.model_manager.save_model(
                         model=self.model,
                         optimizer=self.optimizer,
@@ -162,6 +163,7 @@ class Trainer:
                     improvement_marker = ""
 
             # Print progress with extended metrics
+            current_time = datetime.now()
             print(
                 f'Epoch {epoch+1}/{num_epochs} | '
                 f'Train Loss: {train_loss:.4f} | '
@@ -172,7 +174,8 @@ class Trainer:
                 f'Val Recall: {val_metrics["recall"]:.2%} | '
                 f'Train MSE: {train_metrics["mse"]:.4f} | '
                 f'Val MSE: {val_metrics["mse"]:.4f} | '
-                f'LR: {self.optimizer.param_groups[0]["lr"]:.6f} '
+                f'LR: {self.optimizer.param_groups[0]["lr"]:.6f} | '
+                f'{current_time.strftime("%H:%M:%S")}'
                 f'{improvement_marker}'
             )
 

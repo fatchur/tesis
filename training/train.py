@@ -35,7 +35,7 @@ def main():
 
         # Try to load existing model if it exists
         model = None
-        best_val_loss = float('inf')
+        best_train_loss = float('inf')
         previous_checkpoint = None
         
         try:
@@ -83,10 +83,10 @@ def main():
 
         # Define custom save function with comparison logic
         def save_if_better(current_model, optimizer, epoch, train_loss, val_loss):
-            nonlocal best_val_loss
-            if val_loss < best_val_loss:
-                print(f"New best validation loss: {val_loss:.6f} (previous: {best_val_loss:.6f})")
-                best_val_loss = val_loss
+            nonlocal best_train_loss
+            if train_loss < best_train_loss:
+                print(f"New best validation loss: {train_loss:.6f} (previous: {best_train_loss:.6f})")
+                best_train_loss = train_loss
                 model_manager.save_model(
                     model=current_model,
                     optimizer=optimizer,
