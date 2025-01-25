@@ -92,9 +92,10 @@ class YOLOInspiredGlucoseLoss(nn.Module):
    1. Binary Cross Entropy for range prediction
    2. MSE for value prediction within range
    """
-   def __init__(self, alpha: float = 1.0):
+   def __init__(self, alpha: float = 1.0, betha: float= 1.):
        super().__init__()
        self.alpha = alpha
+       self.betha = betha
        self.bce = nn.BCELoss()
        self.mse = nn.MSELoss()
 
@@ -124,7 +125,7 @@ class YOLOInspiredGlucoseLoss(nn.Module):
            value_loss = torch.tensor(0.0)
 
        # Combine losses
-       total_loss = range_loss + self.alpha * value_loss
+       total_loss = self.alpha * range_loss + self.betha * value_loss
 
        return total_loss
    

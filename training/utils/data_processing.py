@@ -21,9 +21,8 @@ def normalize_target(value: float, ranges: List[Tuple[float, float]], scale: flo
         List of floats representing target vector
     """
     result = [0.0] * len(ranges)
-    
     for i, (start, end) in enumerate(ranges):
-        if start <= value < end:
+        if start < value <= end:
             if end == float('inf'):
                 # For last range (>300/SCALE)
                 # Normalize between start and 1.0
@@ -51,16 +50,20 @@ class DataProcessor:
         train = pd.read_csv(f"{base_dir}/data/v{VERSION}/v{VERSION}_train.csv")
         train = train.dropna()
         train['gd'] = train['gd'] / SCALE
-        train = train[(train['gd'] <= UPPER_THD) & (train['gd'] >= LOWER_THD)]
+        train = train[(train['gd'] <= UPPER_THD) & (train['gd'] > LOWER_THD) & (train['gd'] > 0.0625)]
 
         # Load and process validation data
         val = pd.read_csv(f"{base_dir}/data/v{VERSION}/v{VERSION}_val.csv")
         val = val.dropna()
         val['gd'] = val['gd'] / SCALE
-        val = val[(val['gd'] <= UPPER_THD) & (val['gd'] >= LOWER_THD)]
+        val = val[(val['gd'] <= UPPER_THD) & (val['gd'] > LOWER_THD) & (val['gd'] > 0.0625)]
 
         # Select features
-        drop_columns = ['gd', 'id', 'Unnamed: 0', 'id_pasien']
+        if int(VERSION) < 7: 
+            drop_columns = ['gd', 'id', 'Unnamed: 0', 'id_pasien']
+        else : 
+            drop_columns = ['gd']
+
         if SELECT_FEATURE:
             train_feature = train[feature_lst]
             val_feature = val[feature_lst]

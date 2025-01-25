@@ -91,7 +91,7 @@ class Trainer:
         self.model_manager = model_manager
 
         # Initialize loss function
-        self.criterion = YOLOInspiredGlucoseLoss(alpha=0.1)
+        self.criterion = YOLOInspiredGlucoseLoss(alpha=0.10, betha=0.325)
 
         # Initialize optimizer
         self.optimizer = optim.Adam(
@@ -118,7 +118,7 @@ class Trainer:
         """Train the model with extended metrics tracking"""
         train_losses = []
         val_losses = []
-        best_train_loss = float('inf')
+        best_val_loss = float('inf')
         num_epochs = self.config.get('epochs', 500)
 
         for epoch in range(num_epochs):
@@ -148,8 +148,8 @@ class Trainer:
                 )
                 improvement_marker = "***" if improved else ""
             else:
-                if train_loss < best_train_loss:
-                    best_train_loss = train_loss
+                if val_loss < best_val_loss:
+                    best_val_loss = val_loss
                     self.model_manager.save_model(
                         model=self.model,
                         optimizer=self.optimizer,
