@@ -19,15 +19,20 @@ def main():
         # Load and prepare data
         print("Loading and preparing data...")
         data_processor = DataProcessor()
-        train_feature, train_target, val_feature, val_target = data_processor.load_data(BASE_DIR)
-        train_loader, val_loader = data_processor.prepare_data(
+        train_feature, train_target, val_feature, val_target, test_feature, test_target = data_processor.load_data(BASE_DIR)
+        train_loader, val_loader, test_loader = data_processor.prepare_data(
             train_feature=train_feature,
             train_target=train_target,
             val_feature=val_feature,
             val_target=val_target,
+            test_feature=test_feature,
+            test_target=test_target,
             batch_size=TRAINING_CONFIG['batch_size'],
-            val_batch_size=TRAINING_CONFIG['val_batch_size']
+            val_batch_size=TRAINING_CONFIG['val_batch_size'],
+            test_batch_size=None
         )
+
+        print (test_loader)
         print("Data processing completed successfully")
 
         # Initialize model manager

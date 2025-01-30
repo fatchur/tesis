@@ -58,6 +58,12 @@ class DataProcessor:
         val['gd'] = val['gd'] / SCALE
         val = val[(val['gd'] <= UPPER_THD) & (val['gd'] > LOWER_THD) & (val['gd'] > 0.0625)]
 
+        # Load and process validation data
+        test = pd.read_csv(f"{base_dir}/data/v{VERSION}/v{VERSION}_test.csv")
+        test = test.dropna()
+        test['gd'] = test['gd'] / SCALE
+        test = test[(test['gd'] <= UPPER_THD) & (test['gd'] > LOWER_THD) & (test['gd'] > 0.0625)]
+
         # Select features
         if int(VERSION) < 7: 
             drop_columns = ['gd', 'id', 'Unnamed: 0', 'id_pasien']
@@ -67,11 +73,13 @@ class DataProcessor:
         if SELECT_FEATURE:
             train_feature = train[feature_lst]
             val_feature = val[feature_lst]
+            test_feature = test[feature_lst]
         else:
             train_feature = train.drop(drop_columns, axis=1)
             val_feature = val.drop(drop_columns, axis=1)
+            test_feature = test.drop(drop_columns, axis=1)
 
-        return train_feature, train['gd'], val_feature, val['gd']
+        return train_feature, train['gd'], val_feature, val['gd'], test_feature, test['gd']
 
     @staticmethod
     def create_range_datasets(
@@ -169,8 +177,11 @@ class DataProcessor:
         train_target: pd.Series,
         val_feature: pd.DataFrame,
         val_target: pd.Series,
+        test_feature: pd.DataFrame,
+        test_target: pd.Series,
         batch_size: int = 64,
         val_batch_size: Optional[int] = None,
+        test_batch_size: Optional[int] = None,
         samples_per_range: Optional[int] = None,
         use_weights: bool = True
     ) -> Tuple[DataLoader, DataLoader]:
@@ -236,12 +247,6 @@ class DataProcessor:
             normalize_target(target_val, RANGES, SCALE) 
             for target_val in val_target.values])
 
-        # y_val = torch.tensor(
-        #     val_target.values,
-        #     dtype=torch.float32,
-        #     requires_grad=True
-        # ).view(-1, 1)
-
         y_val = torch.tensor(
                     normalized_val_targets,
                     dtype=torch.float32,
@@ -249,6 +254,25 @@ class DataProcessor:
                 )
 
         val_dataset = TensorDataset(X_val, y_val)
+
+        # test dataset 
+        X_test = torch.tensor(
+            test_feature.values,
+            dtype=torch.float32,
+            requires_grad=True
+        )
+
+        normalized_test_targets = np.array([
+            normalize_target(target_test, RANGES, SCALE) 
+            for target_test in test_target.values])
+
+        y_test = torch.tensor(
+                    normalized_test_targets,
+                    dtype=torch.float32,
+                    requires_grad=True
+                )
+
+        test_dataset = TensorDataset(X_test, y_test)
 
         # Create dataloaders
         train_loader = DataLoader(
@@ -264,4 +288,10 @@ class DataProcessor:
             shuffle=False
         )
 
-        return train_loader, val_loader
+        test_loader = DataLoader(
+            val_dataset,
+            batch_size=test_batch_size or len(test_dataset),
+            shuffle=False
+        )
+
+        return train_loader, val_loader, test_loader
