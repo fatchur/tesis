@@ -4,4 +4,4 @@
 *.png
 .DS_Store
 *.vscode
-test.py
+test.pyc
