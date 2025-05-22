@@ -30,7 +30,7 @@ class HybridFirstBlock(nn.Module):
         super().__init__()
 
         # Calculate conv output size
-        conv_hidden_size = 64
+        conv_hidden_size = hidden_size
 
         # Activation function setup
         activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}

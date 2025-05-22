@@ -91,7 +91,7 @@ class Trainer:
         self.model_manager = model_manager
 
         # Initialize loss function
-        self.criterion = YOLOInspiredGlucoseLoss(alpha=0.10, betha=0.325)
+        self.criterion = YOLOInspiredGlucoseLoss(alpha=config['loss_alpha'], betha=config['loss_betha'])
 
         # Initialize optimizer
         self.optimizer = optim.Adam(
