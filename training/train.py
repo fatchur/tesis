@@ -58,6 +58,8 @@ def main():
                 print("\nModel Architecture:")
                 for key, value in model_info['architecture'].items():
                     print(f"{key}: {value}")
+                print (f"Loss alpha: {TRAINING_CONFIG["loss_alpha"]}")
+                print (f"Loss betha: {TRAINING_CONFIG["loss_betha"]}")
                 print(f"Total parameters: {model_info['total_parameters']:,}")
                 print(f"Trainable parameters: {model_info['trainable_parameters']:,}\n")
         except Exception as e:
