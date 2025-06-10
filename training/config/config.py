@@ -31,7 +31,7 @@ TRAINING_CONFIG = {
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
     'loss_alpha': 0.1,
-    'loss_betha': 0.4
+    'loss_betha': 0.3
 }
 
 # Set random seeds
