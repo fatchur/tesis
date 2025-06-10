@@ -27,11 +27,11 @@ TRAINING_CONFIG = {
     'early_stopping_delta': 1e-4,
     'num_layers': 2,
     'hidden_size': 16,
-    'dropout_rate': 0.35,
+    'dropout_rate': 0.10,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
-    'loss_alpha': 0.3,
-    'loss_betha': 0.2
+    'loss_alpha': 0.2,
+    'loss_betha': 0.25
 }
 
 # Set random seeds
