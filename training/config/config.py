@@ -30,8 +30,8 @@ TRAINING_CONFIG = {
     'dropout_rate': 0.10,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
-    'loss_alpha': 0.3,
-    'loss_betha': 0.2
+    'loss_alpha': 0.2,
+    'loss_betha': 0.25
 }
 
 # Set random seeds
