@@ -27,7 +27,7 @@ TRAINING_CONFIG = {
     'early_stopping_delta': 1e-4,
     'num_layers': 2,
     'hidden_size': 64,
-    'dropout_rate': 0.30,
+    'dropout_rate': 0.35,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
     'loss_alpha': 0.15,
