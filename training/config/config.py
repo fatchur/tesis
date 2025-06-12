@@ -30,7 +30,7 @@ TRAINING_CONFIG = {
     'dropout_rate': 0.20,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
-    'loss_alpha': 0.2,
+    'loss_alpha': 0.15,
     'loss_betha': 0.25
 }
 
