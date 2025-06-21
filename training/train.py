@@ -19,7 +19,7 @@ def main():
         # Load and prepare data
         print("Loading and preparing data...")
         data_processor = DataProcessor()
-        train_feature, train_target, val_feature, val_target, test_feature, test_target = data_processor.load_data(BASE_DIR)
+        train_feature, train_target, val_feature, val_target, test_feature, test_target = data_processor.load_data(BASE_DIR, target_col_name="target")
         train_loader, val_loader, test_loader = data_processor.prepare_data(
             train_feature=train_feature,
             train_target=train_target,
@@ -109,7 +109,8 @@ def main():
             train_loader=train_loader,
             val_loader=val_loader,
             config=TRAINING_CONFIG,
-            model_manager=model_manager
+            model_manager=model_manager,
+            loss='bce'
         )
         # Attach custom save function to trainer
         trainer.save_if_better = save_if_better

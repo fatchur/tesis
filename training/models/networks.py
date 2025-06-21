@@ -169,7 +169,7 @@ class HybridNetwork(nn.Module):
         # Output layer
         self.output_layer = nn.Sequential(
             nn.Linear(hidden_size, len(RANGES)),  
-            nn.Sigmoid()
+            nn.Softmax(dim=-1)
         )
         
         # Initialize weights

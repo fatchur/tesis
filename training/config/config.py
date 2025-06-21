@@ -6,19 +6,14 @@ FEATURE_NUM = 8000
 UPPER_THD = 800/800
 LOWER_THD = 0/800
 SCALE = 800.
-VERSION = 7
+VERSION = 8
 SELECT_FEATURE = False
-RANGES = [
-            (0, 100/SCALE),
-            (100/SCALE, 200/SCALE),
-            (200/SCALE, 300/SCALE),
-            (300/SCALE, float('inf'))
-        ]
+RANGES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 # Training configuration
 TRAINING_CONFIG = {
-    'batch_size': 256,
-    'val_batch_size': 512,
+    'batch_size': 64,
+    'val_batch_size': 80,
     'learning_rate': 0.0001,
     'weight_decay': 0.00005,
     'epochs': 2000,
@@ -30,8 +25,6 @@ TRAINING_CONFIG = {
     'dropout_rate': 0.10,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
-    'loss_alpha': 0.15,
-    'loss_betha': 0.30
 }
 
 # Set random seeds

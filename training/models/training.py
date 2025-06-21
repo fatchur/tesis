@@ -8,7 +8,7 @@ import json
 from datetime import datetime
 from typing import Dict, List, Tuple
 import numpy as np
-from models.losses import YOLOInspiredGlucoseLoss, calculate_range_metrics
+from models.losses import calculate_metrics
 from config.config import RANGES
 from datetime import datetime
 
@@ -83,15 +83,19 @@ class Trainer:
     """Handles model training and evaluation with additional metrics"""
     def __init__(self, model: nn.Module, train_loader: DataLoader, 
                  val_loader: DataLoader, config: Dict, 
-                 model_manager: ModelManager):
+                 model_manager: ModelManager, loss:any=None):
         self.model = model
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.config = config
         self.model_manager = model_manager
 
-        # Initialize loss function
-        self.criterion = YOLOInspiredGlucoseLoss(alpha=config['loss_alpha'], betha=config['loss_betha'])
+        if loss == "bce": 
+            self.criterion = nn.BCELoss()
+        elif loss == "mse":
+            self.criterion = nn.MSELoss()
+        else: 
+            self.criterion = nn.BCELoss()
 
         # Initialize optimizer
         self.optimizer = optim.Adam(
@@ -217,7 +221,7 @@ class Trainer:
             self.optimizer.step()
 
             # Calculate additional metrics
-            accuracy, recall, mse = calculate_range_metrics(outputs, targets)
+            accuracy, recall, mse = calculate_metrics(outputs=outputs, targets=targets)
             
             # Update metrics (weighted by batch size)
             metrics['loss'] += loss.item() * batch_size
@@ -250,7 +254,7 @@ class Trainer:
                 loss = self.criterion(outputs, targets)
 
                 # Calculate additional metrics
-                accuracy, recall, mse = calculate_range_metrics(outputs, targets)
+                accuracy, recall, mse = calculate_metrics(outputs, targets)
                 
                 # Update metrics (weighted by batch size)
                 metrics['loss'] += loss.item() * batch_size
@@ -283,7 +287,7 @@ class ModelEvaluator:
                 outputs = model(inputs)
                 
                 # Calculate range-based metrics
-                accuracy, recall, mse = calculate_range_metrics(outputs, targets)
+                accuracy, recall, mse = calculate_metrics(outputs, targets)
                 
                 # Calculate per-range recall
                 pred_ranges = torch.argmax(outputs, dim=1)
