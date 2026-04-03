@@ -90,8 +90,16 @@ class Trainer:
         self.config = config
         self.model_manager = model_manager
 
-        # Initialize loss function
-        self.criterion = YOLOInspiredGlucoseLoss(alpha=config['loss_alpha'], betha=config['loss_betha'])
+        # Initialize loss function based on configuration
+        loss_type = config.get('loss_type', 'yolo')
+        if loss_type == 'yolo':
+            self.criterion = YOLOInspiredGlucoseLoss(alpha=config['loss_alpha'], betha=config['loss_betha'])
+            print(f"Using YOLOInspiredGlucoseLoss (alpha={config['loss_alpha']}, beta={config['loss_betha']})")
+        elif loss_type == 'mse':
+            self.criterion = nn.MSELoss()
+            print("Using standard MSELoss (original, no masking)")
+        else:
+            raise ValueError(f"Unknown loss type: {loss_type}. Options: 'yolo', 'mse'")
 
         # Initialize optimizer
         self.optimizer = optim.Adam(

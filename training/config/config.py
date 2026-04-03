@@ -30,8 +30,14 @@ TRAINING_CONFIG = {
     'dropout_rate': 0.35,
     'leaky_relu_slope': 0.01,
     'activation': 'leaky_relu',
-    'loss_alpha': 0.2,
-    'loss_betha': 0.25
+
+    # Loss function configuration
+    # Options: 'yolo' (proposed method), 'mse' (original MSE for comparison)
+    'loss_type': 'yolo',
+
+    # YOLO loss weights (only used when loss_type='yolo')
+    'loss_alpha': 0.2,    # Weight for BCE (range classification)
+    'loss_betha': 0.25    # Weight for MSE (value regression)
 }
 
 # Set random seeds
