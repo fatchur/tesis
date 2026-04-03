@@ -33,7 +33,7 @@ TRAINING_CONFIG = {
 
     # Loss function configuration
     # Options: 'yolo' (proposed method), 'mse' (original MSE for comparison)
-    'loss_type': 'yolo',
+    'loss_type': 'mse',
 
     # YOLO loss weights (only used when loss_type='yolo')
     'loss_alpha': 0.2,    # Weight for BCE (range classification)
