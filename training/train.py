@@ -29,7 +29,8 @@ def main():
             test_target=test_target,
             batch_size=TRAINING_CONFIG['batch_size'],
             val_batch_size=TRAINING_CONFIG['val_batch_size'],
-            test_batch_size=None
+            test_batch_size=None,
+            balancing_method=TRAINING_CONFIG.get('balancing_method', 'range_based')
         )
 
         print (test_loader)

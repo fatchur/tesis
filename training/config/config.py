@@ -37,7 +37,11 @@ TRAINING_CONFIG = {
 
     # YOLO loss weights (only used when loss_type='yolo')
     'loss_alpha': 0.2,    # Weight for BCE (range classification)
-    'loss_betha': 0.25    # Weight for MSE (value regression)
+    'loss_betha': 0.25,   # Weight for MSE (value regression)
+
+    # Data balancing configuration
+    # Options: 'range_based' (proposed unique method), 'none' (baseline - original distribution)
+    'balancing_method': 'range_based'
 }
 
 # Set random seeds

@@ -183,11 +183,12 @@ class DataProcessor:
         val_batch_size: Optional[int] = None,
         test_batch_size: Optional[int] = None,
         samples_per_range: Optional[int] = None,
-        use_weights: bool = True
+        use_weights: bool = True,
+        balancing_method: str = 'range_based'
     ) -> Tuple[DataLoader, DataLoader]:
         """
-        Prepare train and validation DataLoaders with range-based sampling
-        
+        Prepare train and validation DataLoaders with configurable balancing
+
         Parameters:
         -----------
         train_feature : pd.DataFrame
@@ -203,36 +204,80 @@ class DataProcessor:
         val_batch_size : Optional[int]
             Batch size for validation. If None, uses full dataset
         samples_per_range : Optional[int]
-            Number of samples to take from each range. If None, uses proportional sampling
+            Number of samples per range (only used for range_based). If None, uses max range size
+        balancing_method : str
+            Balancing method: 'range_based' (proposed unique method), 'none' (baseline - original distribution)
         """
-        # Create range datasets for training data
-        if samples_per_range is None:
-            # Calculate samples per range (use minimum size of all ranges)
+        # Prepare training dataset based on balancing method
+        print(f"\n{'='*60}")
+        print(f"Balancing method: {balancing_method.upper()}")
+        print(f"{'='*60}")
+
+        if balancing_method == 'range_based':
+            # Range-based balancing (proposed unique method)
+            if samples_per_range is None:
+                ranges = RANGES
+                range_sizes = [
+                    ((train_target >= start) & (train_target < end)).sum()
+                    for start, end in ranges
+                ]
+                samples_per_range = max(range_sizes)
+
+            print(f"Using range-based balancing: {samples_per_range} samples per range")
+
+            range_datasets = DataProcessor.create_range_datasets(
+                train_feature,
+                train_target,
+                samples_per_range
+            )
+
+            # Combine all data from ranges
+            all_features = []
+            all_targets = []
+            for dataset in range_datasets:
+                features, targets = dataset.tensors
+                all_features.append(features)
+                all_targets.append(targets)
+
+            all_features = torch.cat(all_features, dim=0)
+            all_targets = torch.cat(all_targets, dim=0)
+            print(f"Total training samples after balancing: {len(all_features)}")
+
+        elif balancing_method == 'none':
+            # No balancing - use original distribution (baseline)
+            print(f"No balancing - using original distribution")
+            print(f"\nOriginal distribution:")
             ranges = RANGES
-            range_sizes = [
-                ((train_target >= start) & (train_target < end)).sum()
-                for start, end in ranges
-            ]
-            samples_per_range = max(range_sizes)
-        
-        range_datasets = DataProcessor.create_range_datasets(
-            train_feature,
-            train_target,
-            samples_per_range
-        )
-        
-        # Combine all data from ranges into single tensors
-        all_features = []
-        all_targets = []
-        for dataset in range_datasets:
-            features, targets = dataset.tensors
-            all_features.append(features)
-            all_targets.append(targets)
-        
-        # Concatenate into single tensors
-        all_features = torch.cat(all_features, dim=0)
-        all_targets = torch.cat(all_targets, dim=0)
-        
+            for i, (start, end) in enumerate(ranges):
+                mask = (train_target >= start) & (train_target < end)
+                count = mask.sum()
+                start_val = start * SCALE
+                end_val = end * SCALE if end != float('inf') else 'inf'
+                print(f"Range {start_val:.0f} - {end_val}: {count} samples")
+
+            all_features = torch.tensor(
+                train_feature.values,
+                dtype=torch.float32,
+                requires_grad=True
+            )
+
+            normalized_targets = np.array([
+                normalize_target(target_val, RANGES, SCALE)
+                for target_val in train_target.values
+            ])
+
+            all_targets = torch.tensor(
+                normalized_targets,
+                dtype=torch.float32,
+                requires_grad=True
+            )
+            print(f"Total training samples: {len(all_features)}")
+
+        else:
+            raise ValueError(f"Unknown balancing method: {balancing_method}. Options: 'range_based', 'none'")
+
+        print(f"{'='*60}\n")
+
         # Create single dataset
         combined_train_dataset = TensorDataset(all_features, all_targets)
         
