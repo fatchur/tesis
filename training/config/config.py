@@ -41,7 +41,7 @@ TRAINING_CONFIG = {
 
     # Data balancing configuration
     # Options: 'range_based' (proposed unique method), 'none' (baseline - original distribution)
-    'balancing_method': 'range_based'
+    'balancing_method': 'none'
 }
 
 # Set random seeds
