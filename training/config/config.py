@@ -33,7 +33,7 @@ TRAINING_CONFIG = {
 
     # Loss function configuration
     # Options: 'yolo' (proposed method), 'mse' (original MSE for comparison)
-    'loss_type': 'mse',
+    'loss_type': 'yolo',
 
     # YOLO loss weights (only used when loss_type='yolo')
     'loss_alpha': 0.2,    # Weight for BCE (range classification)
@@ -41,7 +41,7 @@ TRAINING_CONFIG = {
 
     # Data balancing configuration
     # Options: 'range_based' (proposed unique method), 'none' (baseline - original distribution)
-    'balancing_method': 'none',
+    'balancing_method': 'range_based',
 
     # Backbone architecture configuration
     # Options: 'hybrid' (proposed - dense + conv1d), 'dense' (dense-only), 'conv1d' (conv1d-only)
