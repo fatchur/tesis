@@ -75,7 +75,8 @@ def main():
                 hidden_size=TRAINING_CONFIG['hidden_size'],
                 dropout_rate=TRAINING_CONFIG['dropout_rate'],
                 leaky_relu_slope=TRAINING_CONFIG['leaky_relu_slope'],
-                activation=TRAINING_CONFIG['activation']
+                activation=TRAINING_CONFIG['activation'],
+                backbone_type=TRAINING_CONFIG.get('backbone_type', 'hybrid')
             )
             print("New model initialized successfully")
 

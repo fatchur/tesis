@@ -22,10 +22,100 @@ class ActivationFactory:
         }
         return activations.get(name.lower(), lambda: nn.LeakyReLU(**kwargs))()
 
+class DenseFirstBlock(nn.Module):
+    """Dense-only first block (baseline comparison)"""
+    def __init__(self, input_size: int, hidden_size: int, kernel_size: int = 3,
+                 activation: str = 'leaky_relu', dropout_rate: float = 0.2,
+                 leaky_relu_slope: float = 0.01):
+        super().__init__()
+
+        # Activation function setup
+        activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
+        activation_fn = ActivationFactory.get_activation(activation, **activation_params)
+
+        # Dense path only
+        self.dense_path = nn.Sequential(
+            nn.Linear(input_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Linear(hidden_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.dense_path(x)
+
+
+class ConvFirstBlock(nn.Module):
+    """Conv1D-only first block (baseline comparison)"""
+    def __init__(self, input_size: int, hidden_size: int, kernel_size: int = 3,
+                 activation: str = 'leaky_relu', dropout_rate: float = 0.2,
+                 leaky_relu_slope: float = 0.01):
+        super().__init__()
+
+        # Activation function setup
+        activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
+        activation_fn = ActivationFactory.get_activation(activation, **activation_params)
+
+        # Conv1D path only
+        self.conv_path = nn.Sequential(
+            nn.Conv1d(1, hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate),
+
+            nn.Conv1d(hidden_size, hidden_size, kernel_size, padding='same'),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate)
+        )
+
+        # Flatten and project to hidden_size
+        conv_output_size = input_size * hidden_size
+        self.post_flatten = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(conv_output_size, hidden_size),
+            activation_fn,
+            nn.BatchNorm1d(hidden_size),
+            nn.Dropout(dropout_rate)
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Add channel dimension for Conv1D
+        x = x.unsqueeze(1)  # [B, 1, input_size]
+        x = self.conv_path(x)  # [B, hidden_size, input_size]
+        x = self.post_flatten(x)  # [B, hidden_size]
+        return x
+
+
 class HybridFirstBlock(nn.Module):
     """Hybrid first block containing parallel dense and conv1d paths"""
-    def __init__(self, input_size: int, hidden_size: int, kernel_size: int = 3, 
-                 activation: str = 'leaky_relu', dropout_rate: float = 0.2, 
+    def __init__(self, input_size: int, hidden_size: int, kernel_size: int = 3,
+                 activation: str = 'leaky_relu', dropout_rate: float = 0.2,
                  leaky_relu_slope: float = 0.01):
         super().__init__()
 
@@ -116,7 +206,7 @@ class HybridFirstBlock(nn.Module):
         return projection2
 
 class HybridNetwork(nn.Module):
-    """Neural Network with hybrid first block and standard fully connected layers"""
+    """Neural Network with configurable backbone architecture (dense/conv1d/hybrid)"""
     def __init__(self,
                  input_size: int,
                  output_size: int,
@@ -125,7 +215,8 @@ class HybridNetwork(nn.Module):
                  dropout_rate: float = 0.2,
                  leaky_relu_slope: float = 0.01,
                  activation: str = 'leaky_relu',
-                 conv_kernel_size: int = 3):
+                 conv_kernel_size: int = 3,
+                 backbone_type: str = 'hybrid'):
         super().__init__()
 
         output_size = len(RANGES)
@@ -137,18 +228,49 @@ class HybridNetwork(nn.Module):
             'dropout_rate': dropout_rate,
             'leaky_relu_slope': leaky_relu_slope,
             'activation': activation,
-            'conv_kernel_size': conv_kernel_size
+            'conv_kernel_size': conv_kernel_size,
+            'backbone_type': backbone_type
         }
 
-        # First hybrid block
-        self.first_block = HybridFirstBlock(
-            input_size=input_size,
-            hidden_size=hidden_size,
-            kernel_size=conv_kernel_size,
-            activation=activation,
-            dropout_rate=dropout_rate,
-            leaky_relu_slope=leaky_relu_slope
-        )
+        # Select first block based on backbone type
+        print(f"\n{'='*60}")
+        print(f"Backbone Architecture: {backbone_type.upper()}")
+        print(f"{'='*60}")
+
+        if backbone_type == 'dense':
+            self.first_block = DenseFirstBlock(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                kernel_size=conv_kernel_size,
+                activation=activation,
+                dropout_rate=dropout_rate,
+                leaky_relu_slope=leaky_relu_slope
+            )
+            print("Using Dense-only architecture (baseline)")
+        elif backbone_type == 'conv1d':
+            self.first_block = ConvFirstBlock(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                kernel_size=conv_kernel_size,
+                activation=activation,
+                dropout_rate=dropout_rate,
+                leaky_relu_slope=leaky_relu_slope
+            )
+            print("Using Conv1D-only architecture (baseline)")
+        elif backbone_type == 'hybrid':
+            self.first_block = HybridFirstBlock(
+                input_size=input_size,
+                hidden_size=hidden_size,
+                kernel_size=conv_kernel_size,
+                activation=activation,
+                dropout_rate=dropout_rate,
+                leaky_relu_slope=leaky_relu_slope
+            )
+            print("Using Hybrid architecture (Dense + Conv1D - proposed)")
+        else:
+            raise ValueError(f"Unknown backbone type: {backbone_type}. Options: 'dense', 'conv1d', 'hybrid'")
+
+        print(f"{'='*60}\n")
 
         # Activation setup for subsequent layers
         activation_params = {'negative_slope': leaky_relu_slope} if activation == 'leaky_relu' else {}
