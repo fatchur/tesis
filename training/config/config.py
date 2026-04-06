@@ -45,7 +45,7 @@ TRAINING_CONFIG = {
 
     # Backbone architecture configuration
     # Options: 'hybrid' (proposed - dense + conv1d), 'dense' (dense-only), 'conv1d' (conv1d-only)
-    'backbone_type': 'conv1d'
+    'backbone_type': 'hybrid'
 }
 
 # Set random seeds
