@@ -130,62 +130,66 @@ class Trainer:
         num_epochs = self.config.get('epochs', 500)
 
         for epoch in range(num_epochs):
-            # Training phase
-            train_metrics = self._train_epoch(epoch, num_epochs)
-            train_loss = train_metrics['loss']
-            
-            # Validation phase
-            val_metrics = self._validate_epoch()
-            val_loss = val_metrics['loss']
+            # Training phase (will handle checkpoints internally)
+            train_metrics_list = self._train_epoch(epoch, num_epochs)
 
-            # Store losses
-            train_losses.append(train_loss)
-            val_losses.append(val_loss)
+            # train_metrics_list is a list of (train_metrics, val_metrics, progress_pct) tuples
+            # Process and print each checkpoint
+            for checkpoint_idx, (train_metrics, val_metrics, progress_pct) in enumerate(train_metrics_list):
+                train_loss = train_metrics['loss']
+                val_loss = val_metrics['loss']
 
-            # Update learning rate
-            self.scheduler.step(val_loss)
+                is_final_checkpoint = (checkpoint_idx == len(train_metrics_list) - 1)
 
-            # Save model if better (using custom save function if available)
-            if hasattr(self, 'save_if_better'):
-                improved = self.save_if_better(
-                    self.model, 
-                    self.optimizer,
-                    epoch,
-                    train_loss,
-                    val_loss
+                # Only update LR and save model on final checkpoint
+                improvement_marker = ""
+                if is_final_checkpoint:
+                    # Store losses (only final checkpoint)
+                    train_losses.append(train_loss)
+                    val_losses.append(val_loss)
+
+                    # Update learning rate
+                    self.scheduler.step(val_loss)
+
+                    # Save model if better (using custom save function if available)
+                    if hasattr(self, 'save_if_better'):
+                        improved = self.save_if_better(
+                            self.model,
+                            self.optimizer,
+                            epoch,
+                            train_loss,
+                            val_loss
+                        )
+                        improvement_marker = " ***" if improved else ""
+                    else:
+                        if val_loss < best_val_loss:
+                            best_val_loss = val_loss
+                            self.model_manager.save_model(
+                                model=self.model,
+                                optimizer=self.optimizer,
+                                epoch=epoch,
+                                train_loss=train_loss,
+                                val_loss=val_loss,
+                                filename=model_filename
+                            )
+                            improvement_marker = " ***"
+
+                # Print progress with extended metrics (all checkpoints)
+                current_time = datetime.now()
+                print(
+                    f'Epoch {epoch+1}/{num_epochs} | '
+                    f'Train Loss: {train_loss:.4f} | '
+                    f'Val Loss: {val_loss:.4f} | '
+                    f'Train Acc: {train_metrics["accuracy"]:.2%} | '
+                    f'Val Acc: {val_metrics["accuracy"]:.2%} | '
+                    f'Train Recall: {train_metrics["recall"]:.2%} | '
+                    f'Val Recall: {val_metrics["recall"]:.2%} | '
+                    f'Train MSE: {train_metrics["mse"]:.4f} | '
+                    f'Val MSE: {val_metrics["mse"]:.4f} | '
+                    f'LR: {self.optimizer.param_groups[0]["lr"]:.6f} | '
+                    f'{current_time.strftime("%H:%M:%S")}'
+                    f'{improvement_marker}'
                 )
-                improvement_marker = "***" if improved else ""
-            else:
-                if val_loss < best_val_loss:
-                    best_val_loss = val_loss
-                    self.model_manager.save_model(
-                        model=self.model,
-                        optimizer=self.optimizer,
-                        epoch=epoch,
-                        train_loss=train_loss,
-                        val_loss=val_loss,
-                        filename=model_filename
-                    )
-                    improvement_marker = "***"
-                else:
-                    improvement_marker = ""
-
-            # Print progress with extended metrics
-            current_time = datetime.now()
-            print(
-                f'Epoch {epoch+1}/{num_epochs} | '
-                f'Train Loss: {train_loss:.4f} | '
-                f'Val Loss: {val_loss:.4f} | '
-                f'Train Acc: {train_metrics["accuracy"]:.2%} | '
-                f'Val Acc: {val_metrics["accuracy"]:.2%} | '
-                f'Train Recall: {train_metrics["recall"]:.2%} | '
-                f'Val Recall: {val_metrics["recall"]:.2%} | '
-                f'Train MSE: {train_metrics["mse"]:.4f} | '
-                f'Val MSE: {val_metrics["mse"]:.4f} | '
-                f'LR: {self.optimizer.param_groups[0]["lr"]:.6f} | '
-                f'{current_time.strftime("%H:%M:%S")}'
-                f'{improvement_marker}'
-            )
 
             # Early stopping check
             # if self.early_stopping(self.model, val_loss):
@@ -194,8 +198,8 @@ class Trainer:
 
         return train_losses, val_losses
 
-    def _train_epoch(self, epoch: int = 0, num_epochs: int = 1) -> Dict:
-        """Train for one epoch and return extended metrics with intermediate printing"""
+    def _train_epoch(self, epoch: int = 0, num_epochs: int = 1) -> list:
+        """Train for one epoch with validation checkpoints, return list of (train_metrics, val_metrics, progress_pct) tuples"""
         self.model.train()
         metrics = {
             'loss': 0.0,
@@ -209,12 +213,16 @@ class Trainer:
         print_freq = self.config.get('print_frequency', 1.0)
         total_batches = len(self.train_loader)
 
-        # Calculate print intervals
+        # Calculate validation checkpoints
+        checkpoints = []
         if print_freq < 1.0:
-            print_interval = max(1, int(total_batches * print_freq))
-            print_at_batches = set(range(print_interval - 1, total_batches, print_interval))
+            checkpoint_interval = max(1, int(total_batches * print_freq))
+            checkpoint_batches = list(range(checkpoint_interval - 1, total_batches, checkpoint_interval))
+            # Always include last batch
+            if (total_batches - 1) not in checkpoint_batches:
+                checkpoint_batches.append(total_batches - 1)
         else:
-            print_at_batches = set()
+            checkpoint_batches = [total_batches - 1]  # Only at end of epoch
 
         for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             batch_size = inputs.size(0)
@@ -237,7 +245,7 @@ class Trainer:
 
             # Calculate additional metrics
             accuracy, recall, mse = calculate_range_metrics(outputs, targets)
-            
+
             # Update metrics (weighted by batch size)
             metrics['loss'] += loss.item() * batch_size
             metrics['accuracy'] += accuracy * batch_size
@@ -245,26 +253,20 @@ class Trainer:
             metrics['mse'] += mse * batch_size
             total_size += batch_size
 
-            # Print intermediate progress if configured
-            if batch_idx in print_at_batches:
+            # At checkpoint: validate and store results
+            if batch_idx in checkpoint_batches:
                 progress_pct = ((batch_idx + 1) / total_batches) * 100
-                current_metrics = {k: v / total_size for k, v in metrics.items()}
-                current_time = datetime.now()
-                print(
-                    f'  Epoch {epoch+1}/{num_epochs} | '
-                    f'Progress: {progress_pct:.0f}% ({batch_idx+1}/{total_batches} batches) | '
-                    f'Train Loss: {current_metrics["loss"]:.4f} | '
-                    f'Train Acc: {current_metrics["accuracy"]:.2%} | '
-                    f'Train Recall: {current_metrics["recall"]:.2%} | '
-                    f'Train MSE: {current_metrics["mse"]:.4f} | '
-                    f'{current_time.strftime("%H:%M:%S")}'
-                )
 
-        # Calculate final metrics
-        for key in metrics:
-            metrics[key] /= total_size
+                # Calculate current training metrics
+                current_train_metrics = {k: v / total_size for k, v in metrics.items()}
 
-        return metrics
+                # Run validation
+                val_metrics = self._validate_epoch()
+
+                # Store checkpoint
+                checkpoints.append((current_train_metrics, val_metrics, progress_pct))
+
+        return checkpoints
 
     def _validate_epoch(self) -> Dict:
         """Validate for one epoch and return extended metrics"""
