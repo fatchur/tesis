@@ -45,7 +45,14 @@ TRAINING_CONFIG = {
 
     # Backbone architecture configuration
     # Options: 'hybrid' (proposed - dense + conv1d), 'dense' (dense-only), 'conv1d' (conv1d-only)
-    'backbone_type': 'hybrid'
+    'backbone_type': 'hybrid',
+
+    # Print frequency during training
+    # 1.0 = print once per epoch after processing all batches (default)
+    # 0.5 = print at 50% and 100% of epoch
+    # 0.25 = print at 25%, 50%, 75%, 100% of epoch
+    # 0.1 = print every 10% of batches processed
+    'print_frequency': 0.15
 }
 
 # Set random seeds

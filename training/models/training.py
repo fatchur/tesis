@@ -131,7 +131,7 @@ class Trainer:
 
         for epoch in range(num_epochs):
             # Training phase
-            train_metrics = self._train_epoch()
+            train_metrics = self._train_epoch(epoch, num_epochs)
             train_loss = train_metrics['loss']
             
             # Validation phase
@@ -194,8 +194,8 @@ class Trainer:
 
         return train_losses, val_losses
 
-    def _train_epoch(self) -> Dict:
-        """Train for one epoch and return extended metrics"""
+    def _train_epoch(self, epoch: int = 0, num_epochs: int = 1) -> Dict:
+        """Train for one epoch and return extended metrics with intermediate printing"""
         self.model.train()
         metrics = {
             'loss': 0.0,
@@ -204,8 +204,19 @@ class Trainer:
             'mse': 0.0
         }
         total_size = 0
-        
-        for inputs, targets in self.train_loader:
+
+        # Get print frequency config
+        print_freq = self.config.get('print_frequency', 1.0)
+        total_batches = len(self.train_loader)
+
+        # Calculate print intervals
+        if print_freq < 1.0:
+            print_interval = max(1, int(total_batches * print_freq))
+            print_at_batches = set(range(print_interval - 1, total_batches, print_interval))
+        else:
+            print_at_batches = set()
+
+        for batch_idx, (inputs, targets) in enumerate(self.train_loader):
             batch_size = inputs.size(0)
             inputs = inputs.requires_grad_(True)
             targets = targets.requires_grad_(True)
@@ -233,6 +244,21 @@ class Trainer:
             metrics['recall'] += recall * batch_size
             metrics['mse'] += mse * batch_size
             total_size += batch_size
+
+            # Print intermediate progress if configured
+            if batch_idx in print_at_batches:
+                progress_pct = ((batch_idx + 1) / total_batches) * 100
+                current_metrics = {k: v / total_size for k, v in metrics.items()}
+                current_time = datetime.now()
+                print(
+                    f'  Epoch {epoch+1}/{num_epochs} | '
+                    f'Progress: {progress_pct:.0f}% ({batch_idx+1}/{total_batches} batches) | '
+                    f'Train Loss: {current_metrics["loss"]:.4f} | '
+                    f'Train Acc: {current_metrics["accuracy"]:.2%} | '
+                    f'Train Recall: {current_metrics["recall"]:.2%} | '
+                    f'Train MSE: {current_metrics["mse"]:.4f} | '
+                    f'{current_time.strftime("%H:%M:%S")}'
+                )
 
         # Calculate final metrics
         for key in metrics:
