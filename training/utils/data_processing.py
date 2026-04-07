@@ -65,19 +65,45 @@ class DataProcessor:
         test = test[(test['gd'] <= UPPER_THD) & (test['gd'] > LOWER_THD) & (test['gd'] > 0.0625)]
 
         # Select features
-        if int(VERSION) < 7: 
+        if int(VERSION) < 7:
             drop_columns = ['gd', 'id', 'Unnamed: 0', 'id_pasien']
-        else : 
+        else:
+            # For VERSION >= 7: drop 'gd' and check for 'Unnamed: 0' dynamically
             drop_columns = ['gd']
+
+            # Check if 'Unnamed: 0' exists in any dataset and add to drop list
+            if 'Unnamed: 0' in train.columns:
+                drop_columns.append('Unnamed: 0')
+                print(f"Found 'Unnamed: 0' in train, adding to drop list")
+
+            if 'Unnamed: 0' in val.columns and 'Unnamed: 0' not in drop_columns:
+                drop_columns.append('Unnamed: 0')
+                print(f"Found 'Unnamed: 0' in val, adding to drop list")
+
+            if 'Unnamed: 0' in test.columns and 'Unnamed: 0' not in drop_columns:
+                drop_columns.append('Unnamed: 0')
+                print(f"Found 'Unnamed: 0' in test, adding to drop list")
+
+        print(f"\n{'='*60}")
+        print(f"Dropping columns: {drop_columns}")
+        print(f"{'='*60}\n")
 
         if SELECT_FEATURE:
             train_feature = train[feature_lst]
             val_feature = val[feature_lst]
             test_feature = test[feature_lst]
         else:
-            train_feature = train.drop(drop_columns, axis=1)
-            val_feature = val.drop(drop_columns, axis=1)
-            test_feature = test.drop(drop_columns, axis=1)
+            # Drop columns that exist in each dataset (safe drop)
+            train_feature = train.drop([col for col in drop_columns if col in train.columns], axis=1)
+            val_feature = val.drop([col for col in drop_columns if col in val.columns], axis=1)
+            test_feature = test.drop([col for col in drop_columns if col in test.columns], axis=1)
+
+        print(f"\n{'='*60}")
+        print(f"Feature alignment check:")
+        print(f"Train features: {train_feature.shape[1]}")
+        print(f"Val features: {val_feature.shape[1]}")
+        print(f"Test features: {test_feature.shape[1]}")
+        print(f"{'='*60}\n")
 
         return train_feature, train['gd'], val_feature, val['gd'], test_feature, test['gd']
 
