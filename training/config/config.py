@@ -52,7 +52,7 @@ TRAINING_CONFIG = {
     # 0.5 = print at 50% and 100% of epoch
     # 0.25 = print at 25%, 50%, 75%, 100% of epoch
     # 0.1 = print every 10% of batches processed
-    'print_frequency': 0.05
+    'print_frequency': 1.0
 }
 
 # Set random seeds
