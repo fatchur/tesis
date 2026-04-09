@@ -41,7 +41,7 @@ TRAINING_CONFIG = {
 
     # Data balancing configuration
     # Options: 'range_based' (proposed unique method), 'none' (baseline - original distribution)
-    'balancing_method': 'none',
+    'balancing_method': 'range-based',
 
     # Backbone architecture configuration
     # Options: 'hybrid' (proposed - dense + conv1d), 'dense' (dense-only), 'conv1d' (conv1d-only)
