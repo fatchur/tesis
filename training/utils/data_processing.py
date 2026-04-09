@@ -72,17 +72,17 @@ class DataProcessor:
             drop_columns = ['gd']
 
             # Check if 'Unnamed: 0' exists in any dataset and add to drop list
-            if 'Unnamed: 0' in train.columns:
-                drop_columns.append('Unnamed: 0')
-                print(f"Found 'Unnamed: 0' in train, adding to drop list")
+            # if 'Unnamed: 0' in train.columns:
+            #     drop_columns.append('Unnamed: 0')
+            #     print(f"Found 'Unnamed: 0' in train, adding to drop list")
 
-            if 'Unnamed: 0' in val.columns and 'Unnamed: 0' not in drop_columns:
-                drop_columns.append('Unnamed: 0')
-                print(f"Found 'Unnamed: 0' in val, adding to drop list")
+            # if 'Unnamed: 0' in val.columns and 'Unnamed: 0' not in drop_columns:
+            #     drop_columns.append('Unnamed: 0')
+            #     print(f"Found 'Unnamed: 0' in val, adding to drop list")
 
-            if 'Unnamed: 0' in test.columns and 'Unnamed: 0' not in drop_columns:
-                drop_columns.append('Unnamed: 0')
-                print(f"Found 'Unnamed: 0' in test, adding to drop list")
+            # if 'Unnamed: 0' in test.columns and 'Unnamed: 0' not in drop_columns:
+            #     drop_columns.append('Unnamed: 0')
+            #     print(f"Found 'Unnamed: 0' in test, adding to drop list")
 
         print(f"\n{'='*60}")
         print(f"Dropping columns: {drop_columns}")
